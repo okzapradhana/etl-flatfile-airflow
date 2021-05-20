@@ -10,12 +10,12 @@ from airflow.decorators import dag, task
 from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
+from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 from airflow.models.variable import Variable
-from google.cloud import storage
 
-dataset_id = Variable.get("DATASET_ID")
-project_id = Variable.get("PROJECT_ID")
-bigquery_table_name = "bs_database_sqlite"
+DATASET_ID = Variable.get("DATASET_ID")
+PROJECT_ID = Variable.get("PROJECT_ID")
+BIGQUERY_TABLE_NAME = "bs_database_sqlite"
 OUT_PATH = "/opt/airflow/data/extract_transform_database_sqlite.csv"
 
 @dag(
@@ -33,62 +33,48 @@ def bs_database_sqlite_etl():
     def extract_transform():
         conn = sqlite3.connect('/opt/airflow/data/database.sqlite')
         df = pd.read_sql("""
-            WITH non_dupli_reviews AS (
+                WITH non_dupli_reviews AS (
+                    SELECT 
+                        * 
+                    FROM reviews
+                    GROUP BY reviewid
+                ),
+                                
+                non_dupli_genres AS (
+                    SELECT
+                        reviewid,
+                        GROUP_CONCAT(genre) AS concat_genre
+                    FROM genres
+                    GROUP BY reviewid
+                ),
+                
+                non_dupli_labels AS (
+                    SELECT
+                        reviewid,
+                        GROUP_CONCAT(label) AS concat_label
+                    FROM labels
+                    GROUP BY reviewid
+                ),
+                
+                non_dupli_years AS (
+                    SELECT
+                        reviewid,
+                        GROUP_CONCAT(year) AS concat_year
+                    FROM years
+                    GROUP BY reviewid
+                )
+
                 SELECT 
-                    * 
-                FROM reviews
-                GROUP BY reviewid
-            ),
-            
-            non_dupli_content AS (
-                SELECT
-                    *
-                FROM content
-                GROUP BY reviewid
-            ),
-            
-            non_dupli_genres AS (
-                SELECT
-                    reviewid,
-                    GROUP_CONCAT(genre) AS concat_genre
-                FROM genres
-                GROUP BY reviewid
-            ),
-            
-            non_dupli_labels AS (
-                SELECT
-                    reviewid,
-                    GROUP_CONCAT(label) AS concat_label
-                FROM labels
-                GROUP BY reviewid
-            ),
-            
-            non_dupli_years AS (
-                SELECT
-                    reviewid,
-                    GROUP_CONCAT(year) AS concat_year
-                FROM years
-                GROUP BY reviewid
-            )
-
-            SELECT 
-                ndr.*,
-                g.concat_genre,
-                l.concat_label,
-                c.content,
-                y.concat_year
-            FROM non_dupli_reviews ndr
-            LEFT JOIN non_dupli_genres g ON ndr.reviewid = g.reviewid
-            LEFT JOIN non_dupli_labels l ON ndr.reviewid = l.reviewid
-            LEFT JOIN non_dupli_content c ON ndr.reviewid = c.reviewid
-            LEFT JOIN non_dupli_years y ON ndr.reviewid = y.reviewid
-            
+                    ndr.*,
+                    g.concat_genre,
+                    l.concat_label,
+                    y.concat_year
+                FROM non_dupli_reviews ndr
+                LEFT JOIN non_dupli_genres g ON ndr.reviewid = g.reviewid
+                LEFT JOIN non_dupli_labels l ON ndr.reviewid = l.reviewid
+                LEFT JOIN non_dupli_years y ON ndr.reviewid = y.reviewid            
         """, conn)
-        df.to_csv(OUT_PATH)
-
-    @task()
-    def load_to_bigquery():
-        print("Load to BigQuery Process")
+        df.to_csv(OUT_PATH, index=False, header=False)
 
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
@@ -98,15 +84,42 @@ def bs_database_sqlite_etl():
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
         gcp_conn_id="my_google_cloud_conn_id",
-        src='/opt/airflow/data/disaster_data.csv',
-        dst='disaster_data.csv',
+        src=OUT_PATH,
+        dst='extract_transform_database_sqlite.csv',
         bucket='blank-space-de-batch1-sea'
     )
 
+    loaded_data_bigquery = GCSToBigQueryOperator(
+        task_id='load_to_bigquery',
+        bigquery_conn_id='my_google_cloud_conn_id',
+        bucket='blank-space-de-batch1-sea',
+        source_objects=['extract_transform_database_sqlite.csv'],
+        destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TABLE_NAME}",
+        schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas
+            {'name': 'reviewid', 'type': 'INT64', 'mode': 'REQUIRED'},
+            {'name': 'title', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'artist', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'url', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'score', 'type': 'FLOAT64', 'mode': 'NULLABLE'},
+            {'name': 'best_new_music', 'type': 'INTEGER', 'mode': 'NULLABLE'},
+            {'name': 'author', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'author_type', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'pub_date', 'type': 'DATE', 'mode': 'NULLABLE'},
+            {'name': 'pub_weekday', 'type': 'INT64', 'mode': 'NULLABLE'},
+            {'name': 'pub_day', 'type': 'INT64', 'mode': 'NULLABLE'},
+            {'name': 'pub_month', 'type': 'INT64', 'mode': 'NULLABLE'},
+            {'name': 'pub_year', 'type': 'INT64', 'mode': 'NULLABLE'},
+            {'name': 'concat_genre', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'concat_label', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'concat_year', 'type': 'STRING', 'mode': 'NULLABLE'},
+        ], 
+        autodetect=False,
+        write_disposition='WRITE_TRUNCATE', #If the table already exists - overwrites the table data
+    )
+
     extracted_transformed_data >> stored_data_gcs
-    loaded = load_to_bigquery()
-    stored_data_gcs >> loaded
-    loaded >> end
+    stored_data_gcs >> loaded_data_bigquery
+    loaded_data_bigquery >> end
 
 bs_database_sqlite_dag = bs_database_sqlite_etl()
 # end = DummyOperator(task_id='end')
