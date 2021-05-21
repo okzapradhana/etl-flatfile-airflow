@@ -7,7 +7,6 @@ import sqlite3
 
 from airflow.utils.dates import days_ago
 from airflow.decorators import dag, task
-from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
@@ -28,7 +27,7 @@ OUT_PATH = "/opt/airflow/data/extract_transform_database_sqlite.csv"
     start_date=days_ago(1),
     tags=['sqlite', 'blank-space']
 ) 
-def bs_database_sqlite_etl():
+def bs_database_sqlite_dag():
     @task()
     def extract_transform():
         conn = sqlite3.connect('/opt/airflow/data/database.sqlite')
@@ -74,7 +73,7 @@ def bs_database_sqlite_etl():
                 LEFT JOIN non_dupli_labels l ON ndr.reviewid = l.reviewid
                 LEFT JOIN non_dupli_years y ON ndr.reviewid = y.reviewid            
         """, conn)
-        df.to_csv(OUT_PATH, index=False, header=False)
+        df.to_csv(OUT_PATH, index=False, header=False) #prevent on create Index column and exclude the header row
 
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
@@ -86,13 +85,13 @@ def bs_database_sqlite_etl():
         gcp_conn_id="my_google_cloud_conn_id",
         src=OUT_PATH,
         dst='extract_transform_database_sqlite.csv',
-        bucket='blank-space-de-batch1-sea'
+        bucket='blank-space-de-batch1-sg'
     )
 
     loaded_data_bigquery = GCSToBigQueryOperator(
         task_id='load_to_bigquery',
         bigquery_conn_id='my_google_cloud_conn_id',
-        bucket='blank-space-de-batch1-sea',
+        bucket='blank-space-de-batch1-sg',
         source_objects=['extract_transform_database_sqlite.csv'],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TABLE_NAME}",
         schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas
@@ -121,6 +120,6 @@ def bs_database_sqlite_etl():
     stored_data_gcs >> loaded_data_bigquery
     loaded_data_bigquery >> end
 
-bs_database_sqlite_dag = bs_database_sqlite_etl()
+bs_database_sqlite_etl = bs_database_sqlite_dag()
 # end = DummyOperator(task_id='end')
 # bs_database_sqlite_dag >> end

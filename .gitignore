@@ -4,6 +4,7 @@ logs/
 static-gravity*.json
 .vscode
 data/extract_transform_database_sqlite.csv
+data/extract_transform_customer_invoice_chinook.csv
 keyfile.json
 
 # Byte-compiled / optimized / DLL files
