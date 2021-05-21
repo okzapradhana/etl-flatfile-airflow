@@ -13,7 +13,6 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQue
 from airflow.models.variable import Variable
 
 DATASET_ID = Variable.get("DATASET_ID")
-PROJECT_ID = Variable.get("PROJECT_ID")
 BIGQUERY_TABLE_NAME = "bs_database_sqlite"
 OUT_PATH = "/opt/airflow/data/extract_transform_database_sqlite.csv"
 
