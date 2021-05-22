@@ -15,7 +15,8 @@ DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
 BIGQUERY_TABLE_NAME = "bs_file1000"
 GCS_OBJECT_NAME = "extract_transform_file1000.csv"
-OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
+DATA_PATH = f"{BASE_PATH}/data"
+OUT_PATH = f"{DATA_PATH}/{GCS_OBJECT_NAME}"
 
 @dag(
     default_args={
@@ -30,7 +31,7 @@ OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
 def bs_file1000_dag():
     @task()
     def extract_transform():
-      df = pd.read_excel(f"{BASE_PATH}/data/file_1000.xls", index_col=0).reset_index(drop=True)
+      df = pd.read_excel(f"{DATA_PATH}/file_1000.xls", index_col=0).reset_index(drop=True)
       df = df.drop(columns='First Name.1')
       df['full_name'] = df['First Name'] + " " + df['Last Name']
       df['gender'] = df['Gender'].apply(lambda row: 'M' if row == 'Male' else 'F')
@@ -44,7 +45,6 @@ def bs_file1000_dag():
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
     extract_task = extract_transform()
-    start >> extract_task
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
@@ -74,6 +74,7 @@ def bs_file1000_dag():
         write_disposition='WRITE_TRUNCATE', #If the table already exists - overwrites the table data
     )
 
+    start >> extract_task
     extract_task >> stored_data_gcs
     stored_data_gcs >> loaded_data_bigquery
     loaded_data_bigquery >> end

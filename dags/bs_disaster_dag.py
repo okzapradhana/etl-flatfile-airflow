@@ -15,7 +15,8 @@ DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
 BIGQUERY_TABLE_NAME = "bs_disaster"
 GCS_OBJECT_NAME = "extract_disaster_data.csv"
-OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
+DATA_PATH = f"{BASE_PATH}/data"
+OUT_PATH = f"{DATA_PATH}/{GCS_OBJECT_NAME}"
 
 @dag(
     default_args={
@@ -29,19 +30,18 @@ OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
 ) 
 def bs_disaster_dag():
     @task()
-    def extract():
-      df = pd.read_csv('/opt/airflow/data/disaster_data.csv')
+    def extract_transform():
+      df = pd.read_csv(f"{DATA_PATH}/disaster_data.csv")
       columns = ['text', 'location']
       for column in columns:
         df[column] = df[column].str.replace(r'\s{2,}', ' ', regex=True)
         df[column] = df[column].str.replace(r"[^a-zA-Z0-9\,]", ' ', regex=True)
 
       df.to_csv(OUT_PATH, index=False, header=False)
-
+    
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
-    extract_task = extract()
-    start >> extract_task
+    extract_transform_task = extract_transform()
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
@@ -68,7 +68,8 @@ def bs_disaster_dag():
         write_disposition='WRITE_TRUNCATE', #If the table already exists - overwrites the table data
     )
 
-    extract_task >> stored_data_gcs
+    start >> extract_transform_task
+    extract_transform_task >> stored_data_gcs
     stored_data_gcs >> loaded_data_bigquery
     loaded_data_bigquery >> end
 

@@ -16,7 +16,8 @@ DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
 BIGQUERY_TABLE_NAME = "bs_customer_invoice_chinook"
 GCS_OBJECT_NAME = "extract_transform_customer_invoice_chinook.csv"
-OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
+DATA_PATH = f"{BASE_PATH}/data"
+OUT_PATH = f"{DATA_PATH}/{GCS_OBJECT_NAME}"
 
 @dag(
     default_args={
@@ -31,7 +32,7 @@ OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
 def bs_customer_invoice_chinook_dag():
     @task()
     def extract_transform():
-        conn = sqlite3.connect('/opt/airflow/data/chinook.db')
+        conn = sqlite3.connect(f"{DATA_PATH}/chinook.db")
         df = pd.read_sql(f"""
                                 SELECT
                                     c.CustomerId,
@@ -61,7 +62,6 @@ def bs_customer_invoice_chinook_dag():
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
     extracted_transformed_data = extract_transform()
-    start >> extracted_transformed_data
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
@@ -102,6 +102,7 @@ def bs_customer_invoice_chinook_dag():
         write_disposition='WRITE_TRUNCATE', #If the table already exists - overwrites the table data
     )
 
+    start >> extracted_transformed_data
     extracted_transformed_data >> stored_data_gcs
     stored_data_gcs >> loaded_data_bigquery
     loaded_data_bigquery >> end

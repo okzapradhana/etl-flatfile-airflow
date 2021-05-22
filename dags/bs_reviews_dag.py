@@ -1,6 +1,5 @@
 import os
 import sys
-from airflow.operators.python import PythonOperator, get_current_context
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 import pandas as pd
@@ -60,7 +59,6 @@ def bs_reviews_dag():
       extracted_list.append(extracted)
 
     merged = merge_reviews(extracted_list)
-    start >> extracted_list >> merged
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
@@ -69,8 +67,6 @@ def bs_reviews_dag():
         dst=GCS_OBJECT_NAME,
         bucket='blank-space-de-batch1-sg'
     )
-
-    merged >> stored_data_gcs
 
     loaded_data_bigquery = GCSToBigQueryOperator(
         task_id='load_to_bigquery',
@@ -91,6 +87,8 @@ def bs_reviews_dag():
         write_disposition='WRITE_TRUNCATE', #If the table already exists - overwrites the table data
     )
 
+    start >> extracted_list >> merged
+    merged >> stored_data_gcs
     stored_data_gcs >> loaded_data_bigquery >> end
 
 bs_customer_invoice_chinook_etl = bs_reviews_dag()
