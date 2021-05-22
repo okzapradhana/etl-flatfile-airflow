@@ -85,5 +85,3 @@ def bs_database_sqlite_dag():
     loaded_data_bigquery >> end
 
 bs_database_sqlite_etl = bs_database_sqlite_dag()
-# end = DummyOperator(task_id='end')
-# bs_database_sqlite_dag >> end
