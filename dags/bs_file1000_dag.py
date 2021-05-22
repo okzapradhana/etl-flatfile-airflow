@@ -28,7 +28,7 @@ OUT_PATH = f"{DATA_PATH}/{GCS_OBJECT_NAME}"
     },
     schedule_interval='0 4 * * * ',  # every 4AM
     start_date=days_ago(1),
-    tags=['excel', 'citizen', 'blank-space']
+    tags=['excel', 'platform-user', 'blank-space']
 ) 
 def bs_file1000_dag():
     @task()

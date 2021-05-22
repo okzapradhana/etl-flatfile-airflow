@@ -29,7 +29,7 @@ OUT_PATH = f"{DATA_PATH}/{GCS_OBJECT_NAME}"
     },
     schedule_interval='0 4 * * * ',  # every 4AM
     start_date=days_ago(1),
-    tags=['excel', 'csv', 'reviews', 'blank-space']
+    tags=['excel', 'csv', 'reviews', 'service', 'blank-space']
 )
 def bs_reviews_dag():
     @task()

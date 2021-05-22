@@ -31,7 +31,7 @@ OUT_TWEETS_USER_PATH = f"{DATA_PATH}/{GCS_OBJECT_TWEETS_USER_NAME}"
     },
     schedule_interval='0 4 * * * ',  # every 4AM
     start_date=days_ago(1),
-    tags=['excel', 'csv', 'reviews', 'blank-space']
+    tags=['excel', 'csv', 'tweet', 'sentiment', 'service', 'blank-space']
 )
 def bs_tweets_dag():
     @task()
