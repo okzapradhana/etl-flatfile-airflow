@@ -14,6 +14,8 @@ from airflow.models.variable import Variable
 
 DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
+BUCKET_NAME = Variable.get("BUCKET_NAME")
+GOOGLE_CLOUD_CONN_ID = Variable.get("GOOGLE_CLOUD_CONN_ID")
 BIGQUERY_TABLE_NAME = "bs_database_sqlite"
 GCS_OBJECT_NAME = "extract_transform_database_sqlite.csv"
 DATA_PATH = f"{BASE_PATH}/data"
@@ -33,48 +35,8 @@ def bs_database_sqlite_dag():
     @task()
     def extract_transform():
         conn = sqlite3.connect(f"{DATA_PATH}/database.sqlite")
-        df = pd.read_sql("""
-                WITH non_dupli_reviews AS (
-                    SELECT 
-                        * 
-                    FROM reviews
-                    GROUP BY reviewid
-                ),
-                                
-                non_dupli_genres AS (
-                    SELECT
-                        reviewid,
-                        GROUP_CONCAT(genre) AS concat_genre
-                    FROM genres
-                    GROUP BY reviewid
-                ),
-                
-                non_dupli_labels AS (
-                    SELECT
-                        reviewid,
-                        GROUP_CONCAT(label) AS concat_label
-                    FROM labels
-                    GROUP BY reviewid
-                ),
-                
-                non_dupli_years AS (
-                    SELECT
-                        reviewid,
-                        GROUP_CONCAT(year) AS concat_year
-                    FROM years
-                    GROUP BY reviewid
-                )
-
-                SELECT 
-                    ndr.*,
-                    g.concat_genre,
-                    l.concat_label,
-                    y.concat_year
-                FROM non_dupli_reviews ndr
-                LEFT JOIN non_dupli_genres g ON ndr.reviewid = g.reviewid
-                LEFT JOIN non_dupli_labels l ON ndr.reviewid = l.reviewid
-                LEFT JOIN non_dupli_years y ON ndr.reviewid = y.reviewid            
-        """, conn)
+        with open(f"{BASE_PATH}/sql/database_sqlite.sql", "r") as query:
+            df = pd.read_sql(query.read(), conn)
         df.to_csv(OUT_PATH, index=False, header=False) #prevent on create Index column and exclude the header row
 
     start = DummyOperator(task_id='start')
@@ -83,16 +45,16 @@ def bs_database_sqlite_dag():
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
-        gcp_conn_id="my_google_cloud_conn_id",
+        gcp_conn_id=GOOGLE_CLOUD_CONN_ID,
         src=OUT_PATH,
         dst='extract_transform_database_sqlite.csv',
-        bucket='blank-space-de-batch1-sg'
+        bucket=BUCKET_NAME
     )
 
     loaded_data_bigquery = GCSToBigQueryOperator(
         task_id='load_to_bigquery',
-        bigquery_conn_id='my_google_cloud_conn_id',
-        bucket='blank-space-de-batch1-sg',
+        bigquery_conn_id=GOOGLE_CLOUD_CONN_ID,
+        bucket=BUCKET_NAME,
         source_objects=[GCS_OBJECT_NAME],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TABLE_NAME}",
         schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas

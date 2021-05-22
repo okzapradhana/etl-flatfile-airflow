@@ -14,6 +14,8 @@ from airflow.models.variable import Variable
 
 DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
+BUCKET_NAME = Variable.get("BUCKET_NAME")
+GOOGLE_CLOUD_CONN_ID = Variable.get("GOOGLE_CLOUD_CONN_ID")
 BIGQUERY_TABLE_NAME = "bs_customer_invoice_chinook"
 GCS_OBJECT_NAME = "extract_transform_customer_invoice_chinook.csv"
 DATA_PATH = f"{BASE_PATH}/data"
@@ -33,30 +35,8 @@ def bs_customer_invoice_chinook_dag():
     @task()
     def extract_transform():
         conn = sqlite3.connect(f"{DATA_PATH}/chinook.db")
-        df = pd.read_sql(f"""
-                                SELECT
-                                    c.CustomerId,
-                                    FirstName || ' ' || LastName AS FullName,
-                                    Company,
-                                    Address,
-                                    City,
-                                    State,
-                                    Country,
-                                    PostalCode,
-                                    Phone,
-                                    Fax,
-                                    Email,
-                                    InvoiceId,
-                                    strftime('%Y-%m-%d', InvoiceDate) AS InvoiceDate,
-                                    BillingAddress,
-                                    BillingCity,
-                                    BillingState,
-                                    BillingCountry,
-                                    BillingPostalCode,
-                                    Total
-                                FROM customers c
-                                LEFT JOIN invoices i ON c.CustomerId = i.CustomerId
-                                """, conn)
+        with open(f"{BASE_PATH}/sql/chinook.sql", "r") as query:
+            df = pd.read_sql(query.read(), conn)
         df.to_csv(OUT_PATH, index=False, header=False) #prevent on create Index column and exclude the header row
 
     start = DummyOperator(task_id='start')
@@ -65,16 +45,16 @@ def bs_customer_invoice_chinook_dag():
 
     stored_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_to_gcs",
-        gcp_conn_id="my_google_cloud_conn_id",
+        gcp_conn_id=GOOGLE_CLOUD_CONN_ID,
         src=OUT_PATH,
-        dst='extract_transform_customer_invoice_chinook.csv',
-        bucket='blank-space-de-batch1-sg'
+        dst=GCS_OBJECT_NAME,
+        bucket=BUCKET_NAME
     )
 
     loaded_data_bigquery = GCSToBigQueryOperator(
         task_id='load_to_bigquery',
-        bigquery_conn_id='my_google_cloud_conn_id',
-        bucket='blank-space-de-batch1-sg',
+        bigquery_conn_id=GOOGLE_CLOUD_CONN_ID,
+        bucket=BUCKET_NAME,
         source_objects=[GCS_OBJECT_NAME],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TABLE_NAME}",
         schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas

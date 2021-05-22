@@ -13,6 +13,8 @@ from airflow.models.variable import Variable
 
 DATASET_ID = Variable.get("DATASET_ID")
 BASE_PATH = Variable.get("BASE_PATH")
+BUCKET_NAME = Variable.get("BUCKET_NAME")
+GOOGLE_CLOUD_CONN_ID = Variable.get("GOOGLE_CLOUD_CONN_ID")
 BIGQUERY_TWEETS_TABLE_NAME = "bs_tweets"
 BIGQUERY_TWEETS_USER_TABLE_NAME = "bs_tweets_user"
 GCS_OBJECT_TWEETS_NAME = "extract_transform_tweets.csv"
@@ -75,24 +77,24 @@ def bs_tweets_dag():
 
     stored_tweets_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_tweets_to_gcs",
-        gcp_conn_id="my_google_cloud_conn_id",
+        gcp_conn_id=GOOGLE_CLOUD_CONN_ID,
         src=OUT_TWEETS_PATH,
         dst=GCS_OBJECT_TWEETS_NAME,
-        bucket='blank-space-de-batch1-sg'
+        bucket=BUCKET_NAME
     )
 
     stored_tweets_user_data_gcs = LocalFilesystemToGCSOperator(
         task_id="store_tweets_user_to_gcs",
-        gcp_conn_id="my_google_cloud_conn_id",
+        gcp_conn_id=GOOGLE_CLOUD_CONN_ID,
         src=OUT_TWEETS_USER_PATH,
         dst=GCS_OBJECT_TWEETS_USER_NAME,
-        bucket='blank-space-de-batch1-sg'
+        bucket=BUCKET_NAME
     )
 
     loaded_tweets_data_bigquery = GCSToBigQueryOperator(
         task_id='load_tweets_to_bigquery',
-        bigquery_conn_id='my_google_cloud_conn_id',
-        bucket='blank-space-de-batch1-sg',
+        bigquery_conn_id=GOOGLE_CLOUD_CONN_ID,
+        bucket=BUCKET_NAME,
         source_objects=[GCS_OBJECT_TWEETS_NAME],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TWEETS_TABLE_NAME}",
         schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas
@@ -126,8 +128,8 @@ def bs_tweets_dag():
 
     loaded_tweets_user_data_bigquery = GCSToBigQueryOperator(
         task_id='load_tweets_user_to_bigquery',
-        bigquery_conn_id='my_google_cloud_conn_id',
-        bucket='blank-space-de-batch1-sg',
+        bigquery_conn_id=GOOGLE_CLOUD_CONN_ID,
+        bucket=BUCKET_NAME,
         source_objects=[GCS_OBJECT_TWEETS_USER_NAME],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TWEETS_USER_TABLE_NAME}",
         schema_fields=[
