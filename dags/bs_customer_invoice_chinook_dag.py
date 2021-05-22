@@ -13,8 +13,10 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQue
 from airflow.models.variable import Variable
 
 DATASET_ID = Variable.get("DATASET_ID")
+BASE_PATH = Variable.get("BASE_PATH")
 BIGQUERY_TABLE_NAME = "bs_customer_invoice_chinook"
-OUT_PATH = "/opt/airflow/data/extract_transform_customer_invoice_chinook.csv"
+GCS_OBJECT_NAME = "extract_transform_customer_invoice_chinook.csv"
+OUT_PATH = f"{BASE_PATH}/data/{GCS_OBJECT_NAME}"
 
 @dag(
     default_args={
@@ -73,7 +75,7 @@ def bs_customer_invoice_chinook_dag():
         task_id='load_to_bigquery',
         bigquery_conn_id='my_google_cloud_conn_id',
         bucket='blank-space-de-batch1-sg',
-        source_objects=['extract_transform_customer_invoice_chinook.csv'],
+        source_objects=[GCS_OBJECT_NAME],
         destination_project_dataset_table=f"{DATASET_ID}.{BIGQUERY_TABLE_NAME}",
         schema_fields=[ #based on https://cloud.google.com/bigquery/docs/schemas
             {'name': 'customer_id', 'type': 'INT64', 'mode': 'REQUIRED'},
