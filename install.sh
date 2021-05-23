@@ -1,5 +1,7 @@
+# You can freely edit this file based on your needs
 export AIRFLOW_HOME=$(pwd)
 
+#If you used Linux system, if not. Skip this steps
 sudo apt-get install -y --no-install-recommends \
         freetds-bin \
         krb5-user \
@@ -21,17 +23,26 @@ pip install "apache-airflow[async,postgres,google]==${AIRFLOW_VERSION}" --constr
 pip install xlrd
 pip install openpyxl
 
+#Init DB based on AIRFLOW_HOME path
 airflow db init
 
+#Create account to login to Airflow web
+AIRFLOW_USERNAME=admin
+AIRFLOW_FIRSTNAME=Data
+AIRFLOW_LASTNAME=Engineer
+AIRFLOW_EMAIL=dataengineer@company.org
+
 airflow users create \
-    --username admin \
-    --firstname Data \
-    --lastname Engineer \
+    --username "${AIRFLOW_USERNAME}" \
+    --firstname "${AIRFLOW_FIRSTNAME}" \
+    --lastname "${AIRFLOW_LASTNAME}" \
     --role Admin \
-    --email dataengineer@company.org        
+    --email "${AIRFLOW_EMAIL}"
 
 #Run on 1st terminal
 airflow webserver --port 8080
 
 #Run on separate terminal, but you have to export the AIRFLOW_HOME variable again before run this command
 airflow scheduler
+
+#Then open localhost:8080 on your browser and input your username and password that you just created
