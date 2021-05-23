@@ -3,6 +3,7 @@ ETL from flat file data sources to Data Warehouse.
 
 ## **Architecture Overview**
 ![architecture](images/ETL%20with%20Airflow%20Architecture.png)
+*Made by draw.io*
 
 ## **Data Sources**
 1. SQLite
@@ -49,6 +50,11 @@ This repo is using Native Airflow that is intended to get understanding on how t
     --email "${AIRFLOW_EMAIL}"
    ```
    You will need to input your password when executing this command. And its your freedom to change the `USERNAME`, `FIRSTNAME` , `LASTNAME`, and `EMAIL` variable based your needs.
+   If you curious on checking this username on `airflow.db`, let me show it to you. 
+   
+   Here is the output:
+   ![username-sqlite](images/New%20user%20will%20be%20create%20on%20ab_user%20table.png) 
+   I'm using https://lana-k.github.io/sqliteviz/#/editor to display the SQLite data, dont be afraid as your SQLite file wont persist there.
 6. On same terminal, start the Airflow webserver with: 
    ```bash
    airflow webserver --port 8080
