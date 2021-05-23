@@ -67,7 +67,7 @@ If you need to install other dependecies other than what have been installed by 
 
 ### BigQuery Setup
 This project is used some of GCP services which is GCS and BigQuery, and we need to do some stuff on them.
-1. On your GCP console, go to BigQuery. You can find it on `Big Data > BigQuery`
+1. On your GCP console, go to BigQuery. You can find it on **Big Data > BigQuery**
 2. Then create your Dataset ![create-dataset](/images/Create%20Dataset%20menu.png)
 3. Fill the Dataset field such as. In this project we only need to set:
    - **Data set ID** (example: my_first_bigquery)
@@ -79,7 +79,7 @@ This project is used some of GCP services which is GCS and BigQuery, and we need
 ![ensure-dataset-created](/images/Ensure%20BQ%20Dataset%20created.png)
 <br><br>
 ### Google Cloud Storage Setup
-1. Back to your GCP console, choose Cloud Storage. You can find it on `Storage > Cloud Storage`
+1. Back to your GCP console, choose Cloud Storage. You can find it on **Storage > Cloud Storage**
 2. Click `CREATE BUCKET` button. Then fill some fields such as:
    - Name your bucket (example: blank-space-de-batch1)
    - Choose where to store your data
@@ -92,7 +92,7 @@ This project is used some of GCP services which is GCS and BigQuery, and we need
 <br><br>
 ### Service Account
 To recognized by Google Cloud Platform and interact with them. We have to set our service account.
-1. Go to GCP Console again, then navigate to `Products > IAM & Admin > Service Accounts`
+1. Go to GCP Console again, then navigate to **Products > IAM & Admin > Service Accounts**
 2. Click `CREATE SERVICE ACCOUNT` button
 3. Fill Service account details by filling `Service account name` and `Service account description` then click `CREATE` 
    <br>Example:
@@ -134,10 +134,10 @@ Airflow Variables is very important if you want to set global value which can ac
 1. On http://localhost:8080 go to **Admin > Variables**
 2. Click the **Plus (+)** icon. Or you can just Import Variables which is json file containing key value of variables.
 3. At very least, this projects must have this Variables:
-   1. BASE_PATH
-   2. BUCKET_NAME
-   3. DATASET_ID
-   4. GOOGLE_CLOUD_CONN_ID
+   1. **BASE_PATH**
+   2. **BUCKET_NAME**
+   3. **DATASET_ID**
+   4. **GOOGLE_CLOUD_CONN_ID**
 4. Done! Now your DAGs can access this variable by using:
    ```python
    from airflow.models.variable import Variable
