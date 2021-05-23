@@ -158,9 +158,16 @@ Airflow Variables is very important if you want to set global value which can ac
 Example:
 ![variables-airflow](images/Set%20Airflow%20Variable.png)
 
-## Airflow DAGs
-This is DAGs result of this project
+## Results
+- This is DAGs result of this project
 ![dags-airflow](images/List%20DAGS%20Airflow.png)
+
+- Stored data on Google Cloud Storage
+![data-gcs](images/Final%20Result%20Data%20on%20GCS.png)
+
+- The result of loaded table in Data Warehouse which using BigQuery
+![loaded-table-bq](images/Final%20Result%20Data%20on%20BigQuery.png)
+
 
 ## How to Use
 Everytime you want to run *Native Airflow* on your computer. Do this: 
