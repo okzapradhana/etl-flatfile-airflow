@@ -150,7 +150,7 @@ Example:
 ![variables-airflow](images/Set%20Airflow%20Variable.png)
 
 ## How to Use
-Everytime you want to run Airflow on your computer. Do this: 
+Everytime you want to run *Native Airflow* on your computer. Do this: 
 1. Activate your virtual environment by executing `source venv/bin/activate`
 2. Run `airflow webserver --port 8080 ` at your current terminal
 3. Run `airflow scheduler` on your other terminal.
