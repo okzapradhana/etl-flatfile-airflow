@@ -1,9 +1,12 @@
 # ETL with Airflow, Google Cloud Storage and BigQuery
 ETL from flat file data sources to Data Warehouse.
 
+## **Architecture Overview**
+![architecture](images/ETL%20with%20Airflow%20Architecture.png)
+
 ## **Data Sources**
 1. SQLite
-2. Comma separated values* (CSV)
+2. Comma separated values (CSV)
 3. Excel (xls, xlsx)
 4. JSON
 
@@ -148,6 +151,10 @@ Airflow Variables is very important if you want to set global value which can ac
 
 Example:
 ![variables-airflow](images/Set%20Airflow%20Variable.png)
+
+## Airflow DAGs
+This is DAGs result of this project
+![dags-airflow](images/List%20DAGS%20Airflow.png)
 
 ## How to Use
 Everytime you want to run *Native Airflow* on your computer. Do this: 
